@@ -1,50 +1,86 @@
-import requests
-import time
-from pprint import pprint
-from settings import TOKEN
+# import requests
+# from pprint import pprint
+# from settings import TOKEN
+# from printers import print_menu
+# from Valyuta_replace.valyuta import valyuta_to_see
 
-send_message_url  = "https://api.telegram.org/bot8229527955:AAFNKPd82bE3ObqgMusWsN-bqV-7tjGnBzs/sendMessage"
-update_message_url = "https://api.telegram.org/bot8229527955:AAFNKPd82bE3ObqgMusWsN-bqV-7tjGnBzs/getUpdates"
+# update_message_url = f"https://api.telegram.org/bot{TOKEN}/getUpdates"
+# send_message_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+
+# last_update_id = None
+# while True:
+    
+#     if isinstance(last_update_id,int):
+#         update_params = {
+#             "offset":last_update_id + 1
+#         }
+#     else:
+#         update_params = {}
+        
+#     r = requests.get(update_message_url,params=update_params)
+
+#     if r.status_code == 200:
+#         result = r.json()['result']
+        
+#         if result :
+#             message = result[-1]
+             #last_update_id = message['update_id']
+             
+#             id = message['message']['from']['id']
+#             text = message['message']['text']
+            
+#             if text == "/start":
+#                 text = print_menu()
+#                 send_params = {
+#                     "chat_id":id,
+#                     "text":text
+#                 }
+#             else:
+#                 send_params = {
+#                     "chat_id":id,
+#                     "text":valyuta_to_see(text=text)
+#                 }
+#           
+#             requests.get(send_message_url,params=send_params)
+
+import requests
+from settings import TOKEN
+from printers import print_menu
+from Valyuta_replace.valyuta import valyuta_to_see
+
+update_message_url = f"https://api.telegram.org/bot{TOKEN}/getUpdates"
+send_message_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
 last_update_id = None
+
 while True:
-    
-     # Agar oldingi update_id mavjud bo‘lsa, offset bilan yuboramiz
-    params = {"offset": last_update_id + 1} if last_update_id else {}
-    
-    r = requests.get(update_message_url,params)
-    
+    update_params = {"offset": last_update_id + 1} if isinstance(last_update_id, int) else {}
+
+    r = requests.get(update_message_url, params=update_params)
+
     if r.status_code == 200:
-        data = r.json()
-        result = data['result'] #list qabul qilib olyabman
+        result = r.json().get("result", [])
         
-        if result:   # malumot borligini tekshirib beradi
+        if result:
             message = result[-1]
-            update_id = message['update_id']
-            
-            if last_update_id != update_id:
-                text = message['message']['text']
-                
+            last_update_id = message["update_id"]  # har doim update_id yangilanadi
+
+            if "message" in message:
+                user_message = message["message"]
+                chat_id = user_message["from"]["id"]
+                text = user_message.get("text", "")
+
+                # /start bo'lsa menyuni chiqaramiz
                 if text == "/start":
-                    word = "Salom siz beckend dasturchilar botiga xush kelibsiz!"
-                    params = {
-                                "chat_id":message['message']['chat']['id'],
-                                "text":word
-                            }
-                elif text == "/stop":
-                    word = "xayr"
-                    params = {
-                                "chat_id":message['message']['chat']['id'],
-                                "text":word
-                            }
-                    
-                else:    
-                    params = {
-                                "chat_id":message['message']['chat']['id'],
-                                "text":text
-                            }
-                
-                requests.get(send_message_url,params)
-                last_update_id = update_id
-                time.sleep(2)
-       
+                    reply_text = print_menu()
+                else:
+                    reply_text = valyuta_to_see(text)
+
+                send_params = {
+                    "chat_id": chat_id,
+                    "text": reply_text,
+                    "parse_mode": "Markdown"  # agar menyu markdown bo‘lsa
+                }
+
+                requests.get(send_message_url, params=send_params)
+
